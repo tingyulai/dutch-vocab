@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Dutch Vocabulary</title>
+  <meta name="description" content="Learn Dutch words through story-style example sentences.">
+  <meta name="theme-color" content="#F4EFE8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#141815" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Header -->
+    <header class="topbar">
+      <h1 class="brand">Dutch vocabulary</h1>
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle light / dark mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </header>
+
+    <main class="views">
+      <!-- Tab 1: Study -->
+      <section class="view active" id="view-study" aria-label="Study">
+        <div class="stories" id="stories" role="list"></div>
+
+        <div class="card month-card">
+          <div class="month-head">
+            <h2 id="monthTitle">Studied this month</h2>
+            <span class="count-pill" id="monthCount">0</span>
+          </div>
+          <div id="monthList"></div>
+        </div>
+      </section>
+
+      <!-- Tab 2: Word list -->
+      <section class="view" id="view-words" aria-label="Word list">
+        <div class="wl-head">
+          <h2>All words</h2>
+          <span class="count-pill" id="wordTotal">0</span>
+        </div>
+        <div id="wordList"></div>
+      </section>
+
+      <!-- Tab 3: Profile -->
+      <section class="view" id="view-profile" aria-label="Profile">
+        <div class="placeholder">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          <h2>Profile</h2>
+          <p>Coming soon.</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom navigation -->
+    <nav class="bottom-nav" aria-label="Main">
+      <button class="nav-item active" data-view="view-study">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6.5a2.5 2.5 0 0 0 0 5H19"/></svg>
+        <span>Study</span>
+      </button>
+      <button class="nav-item" data-view="view-words">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        <span>Word list</span>
+      </button>
+      <button class="nav-item" data-view="view-profile">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Full-screen story viewer -->
+  <div class="story" id="story" hidden aria-modal="true" role="dialog" aria-label="Example sentences">
+    <div class="story-inner" id="storyInner">
+      <div class="story-bars" id="storyBars"></div>
+      <div class="story-head">
+        <div class="story-avatar" id="storyAvatar"></div>
+        <div class="story-title">
+          <div class="story-word" id="storyWord"></div>
+          <div class="story-expiry" id="storyExpiry"></div>
+        </div>
+        <div class="story-plays" id="storyPlays"></div>
+        <button class="icon-btn story-btn" id="muteBtn" aria-label="Mute audio">
+          <svg class="icon-vol" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+          <svg class="icon-mute" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6M17 9l6 6"/></svg>
+        </button>
+        <button class="icon-btn story-btn" id="closeBtn" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="story-body">
+        <p class="story-nl" id="storyNl"></p>
+        <p class="story-en" id="storyEn"></p>
+      </div>
+      <div class="story-hint">Tap ← → for sentences · Hold to pause · Swipe for next word</div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
