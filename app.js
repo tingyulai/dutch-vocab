@@ -164,6 +164,28 @@
     store.set(REVIEWS_KEY, reviews);
   }
 
+  // Words used to be listed as "De xxx"; the article was dropped. Move saved progress to the new names.
+  const dropDe = w => w.replace(/^de\s+(.)/i, (_, c) => c.toUpperCase());
+  function migrateDeNames() {
+    const readAt = getReadAt(), reviews = getReviews(), log = getLog();
+    const deck = store.get(DECK_KEY, null);
+    let changed = false;
+    for (const w of Object.keys(readAt)) {
+      const n = dropDe(w);
+      if (n !== w) { readAt[n] = Math.min(readAt[n] || Infinity, readAt[w]); delete readAt[w]; changed = true; }
+    }
+    for (const w of Object.keys(reviews)) {
+      const n = dropDe(w);
+      if (n !== w) { reviews[n] = (reviews[n] || 0) + reviews[w]; delete reviews[w]; changed = true; }
+    }
+    for (const day of Object.keys(log)) {
+      const renamed = [...new Set(log[day].map(dropDe))];
+      if (renamed.join('\n') !== log[day].join('\n')) { log[day] = renamed; changed = true; }
+    }
+    if (deck && deck.words.some(w => dropDe(w) !== w)) { deck.words = [...new Set(deck.words.map(dropDe))]; store.set(DECK_KEY, deck); }
+    if (changed) { store.set(READ_KEY, readAt); store.set(REVIEWS_KEY, reviews); store.set(LOG_KEY, log); }
+  }
+
   // Once a day: keep yesterday's still-unread picks, then top up to DECK_SIZE unread words in file order.
   function refreshDeck() {
     const deck = store.get(DECK_KEY, null);
@@ -657,6 +679,7 @@
   seedSampleHistory();
   migrateReadAt();
   migrateReviews();
+  migrateDeNames();
   updateMuteBtn();
   renderMonth();
   let lastDay = todayKey();

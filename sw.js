@@ -1,5 +1,5 @@
 // Offline cache: serve app files from cache, refresh them in the background.
-const CACHE = 'dutch-vocab-v15';
+const CACHE = 'dutch-vocab-v16';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png', './words.csv',
   ...Array.from({ length: 9 }, (_, i) => `./covers/cover-${i + 1}.jpg`)];
 
