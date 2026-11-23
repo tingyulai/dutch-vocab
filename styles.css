@@ -303,6 +303,46 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 /* ---------- Word list ---------- */
 .wl-head { display: flex; align-items: center; justify-content: space-between; margin: 6px 2px 4px; }
 .wl-head h2 { font-size: 17px; font-weight: 600; margin: 0; }
+.wl-head-right { display: flex; align-items: center; gap: 4px; margin-right: -8px; }
+#refreshWords svg { width: 20px; height: 20px; }
+#refreshWords.spinning svg { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Toast & dialog ---------- */
+.toast {
+  position: fixed; z-index: 60; left: 50%;
+  bottom: calc(92px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 8px);
+  max-width: calc(min(100vw, 430px) - 48px); width: max-content;
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--text); color: var(--bg);
+  font-size: 14px; line-height: 1.35; text-align: center;
+  box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+.modal {
+  position: fixed; inset: 0; z-index: 70;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(12, 15, 13, 0.55);
+}
+.modal[hidden] { display: none; }
+.modal-card {
+  width: min(100%, 340px);
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 20px 16px;
+}
+.modal-card h2 { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
+.modal-card p { font-size: 14px; line-height: 1.45; color: var(--muted); margin: 0 0 18px; overflow-wrap: anywhere; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.btn { height: 40px; padding: 0 18px; border-radius: 20px; font-size: 15px; font-weight: 500; }
+.btn-quiet { color: var(--text); }
+.btn-quiet:hover { background: var(--surface-2); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
 .wl-letter {
   margin: 18px 4px 8px; font-size: 12px; font-weight: 600;
   letter-spacing: .12em; color: var(--muted);

@@ -82,6 +82,11 @@
     const rows = parseCSV(text.replace(/^﻿/, '').trim());
     const seen = new Set();
     return rows.slice(1).map(r => {
+      // A whole line pasted into column A ("word,sentence,English,…"): split it into its columns.
+      if (r.slice(1).every(v => !cell(v)) && /[,;]/.test(r[0] || '')) {
+        const byComma = parseCSV(r[0])[0] || [];
+        r = byComma.length >= 3 ? byComma : r[0].split(';');
+      }
       const word = dropDe(cell(r[0]));
       const examples = [];
       for (let i = 1; i < r.length; i += 2) {
@@ -122,19 +127,29 @@
   // If it can't be reached, use words.csv from the site, then the last copy that loaded (offline).
   const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5iNQR0NAour4AAi3x3maT2uUKPDhacQ1DVCUiSqBqY4kqaFIpsMQCc6hLwkKmiJQHqQI9sbYis4WK/pub?output=csv';
   let lastFetch = 0, loadedCsv = '';
+
+  // Fetches one source and returns its text, or null if it can't be reached or holds no words
+  // (e.g. a sign-in page instead of CSV). The time stamp gets past Google's few-minute cache.
+  async function loadListText(url) {
+    try {
+      const busted = url.startsWith('http') ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : url;
+      const res = await fetch(busted, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const text = await res.text();
+      return parseWords(text).length ? text : null;
+    } catch { return null; }
+  }
+  function applyList(text) {
+    setWords(text);
+    store.set(WORDS_CSV_KEY, text);
+    loadedCsv = text;
+  }
+
   async function fetchWordList() {
     lastFetch = Date.now();
     for (const url of [SHEET_CSV_URL, 'words.csv'].filter(Boolean)) {
-      try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) throw new Error(res.status);
-        const text = await res.text();
-        if (!parseWords(text).length) throw new Error('no words'); // e.g. a sign-in page instead of CSV
-        setWords(text);
-        store.set(WORDS_CSV_KEY, text);
-        loadedCsv = text;
-        return;
-      } catch { /* try the next source */ }
+      const text = await loadListText(url);
+      if (text) { applyList(text); return; }
     }
     if (!loadedCsv) { loadedCsv = store.get(WORDS_CSV_KEY, ''); setWords(loadedCsv); }
   }
@@ -387,6 +402,58 @@
     });
     $('wordList').innerHTML = html || `<p class="empty">No words yet — add some to words.csv</p>`;
   }
+
+  // ---------- "Check for new words" button ----------
+  let toastTimer = 0;
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  let pendingList = '';
+  async function checkForNewWords() {
+    const btn = $('refreshWords');
+    if (btn.classList.contains('spinning')) return;
+    btn.classList.add('spinning');
+    const text = SHEET_CSV_URL ? await loadListText(SHEET_CSV_URL) : await loadListText('words.csv');
+    lastFetch = Date.now();
+    btn.classList.remove('spinning');
+    if (!text) { showToast("Couldn't reach the word list — check your connection"); return; }
+    const have = new Set(WORDS.map(w => w.word.toLowerCase()));
+    const added = parseWords(text).filter(w => !have.has(w.word.toLowerCase()));
+    if (added.length) {
+      pendingList = text;
+      const n = added.length;
+      $('newWordsTitle').textContent = `Load ${n} new word${n === 1 ? '' : 's'}?`;
+      const names = added.slice(0, 5).map(w => w.word).join(', ');
+      $('newWordsList').textContent = n > 5 ? `${names} + ${n - 5} more` : names;
+      $('newWordsModal').hidden = false;
+      $('newWordsLoad').focus();
+    } else if (text !== loadedCsv) {
+      applyList(text);
+      renderStudy(); renderWordList();
+      showToast('No new words · sentences updated');
+    } else {
+      showToast('No new words · edits can take ~5 min');
+    }
+  }
+  function closeNewWords() { $('newWordsModal').hidden = true; pendingList = ''; }
+
+  $('refreshWords').addEventListener('click', checkForNewWords);
+  $('newWordsLater').addEventListener('click', closeNewWords);
+  $('newWordsModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeNewWords(); });
+  $('newWordsLoad').addEventListener('click', () => {
+    const before = WORDS.length;
+    applyList(pendingList);
+    closeNewWords();
+    renderStudy(); renderWordList();
+    const n = WORDS.length - before;
+    showToast(`Added ${n} word${n === 1 ? '' : 's'} · tap + on Study to practise`);
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('newWordsModal').hidden) closeNewWords(); });
 
   function stopListSpeech() {
     listToken++;
