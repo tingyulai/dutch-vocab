@@ -120,7 +120,7 @@
 
   // The word list comes from the Google Sheet (published as CSV) so words can be added from the phone.
   // If it can't be reached, use words.csv from the site, then the last copy that loaded (offline).
-  const SHEET_CSV_URL = '';
+  const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5iNQR0NAour4AAi3x3maT2uUKPDhacQ1DVCUiSqBqY4kqaFIpsMQCc6hLwkKmiJQHqQI9sbYis4WK/pub?output=csv';
   let lastFetch = 0, loadedCsv = '';
   async function fetchWordList() {
     lastFetch = Date.now();
