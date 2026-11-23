@@ -1,5 +1,5 @@
 // Offline cache: serve app files from cache, refresh them in the background.
-const CACHE = 'dutch-vocab-v16';
+const CACHE = 'dutch-vocab-v17';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './icon.svg', './apple-touch-icon.png', './words.csv',
   ...Array.from({ length: 9 }, (_, i) => `./covers/cover-${i + 1}.jpg`)];
 
@@ -17,6 +17,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Other sites (the Google Sheet, fonts) go straight to the network; the app keeps its own offline copy.
+  if (new URL(e.request.url).origin !== location.origin) return;
   // The word list changes when edited: always try the network first, use the cached copy offline.
   if (new URL(e.request.url).pathname.endsWith('/words.csv')) {
     e.respondWith(

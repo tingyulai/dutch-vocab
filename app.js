@@ -60,24 +60,43 @@
         part.startsWith('[') && part.endsWith(']') ? `<mark>${esc(part.slice(1, -1))}</mark>` : esc(part)
       ).join('');
     }
-    const at = raw.toLowerCase().indexOf(word.toLowerCase());
-    if (at < 0) return esc(raw);
-    return esc(raw.slice(0, at)) + `<mark>${esc(raw.slice(at, at + word.length))}</mark>` + esc(raw.slice(at + word.length));
+    const mark = (at, len) => esc(raw.slice(0, at)) + `<mark>${esc(raw.slice(at, at + len))}</mark>` + esc(raw.slice(at + len));
+    const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Rows typed on the phone have no brackets: try the whole entry (without het/een) as whole words,
+    // then its longest single word, then a plain substring search.
+    const core = word.replace(/^(het|een)\s+/i, '').replace(/\s*\(.*\)\s*/g, ' ').trim();
+    const parts = core.split(/[\s/]+/).filter(p => p.length >= 3).sort((a, b) => b.length - a.length);
+    for (const c of [core, ...parts]) {
+      const m = new RegExp(`(^|[^\\p{L}])(${escRe(c)})(?![\\p{L}])`, 'iu').exec(raw);
+      if (m) return mark(m.index + m[1].length, m[2].length);
+    }
+    const at = raw.toLowerCase().indexOf(core.toLowerCase());
+    return at < 0 ? esc(raw) : mark(at, core.length);
   }
+
+  // Word names drop a leading "de" (so the D section isn't full of nouns); keep the first row of a repeated word.
+  const dropDe = w => w.replace(/^de\s+(.)/i, (_, c) => c.toUpperCase());
+  const cell = v => (v || '').trim().replace(/;+$/, '').trim();
 
   function parseWords(text) {
     const rows = parseCSV(text.replace(/^﻿/, '').trim());
+    const seen = new Set();
     return rows.slice(1).map(r => {
-      const word = r[0].trim();
+      const word = dropDe(cell(r[0]));
       const examples = [];
       for (let i = 1; i < r.length; i += 2) {
-        const raw = (r[i] || '').trim();
-        if (raw) examples.push({ nl: raw.replace(/[[\]]/g, ''), html: highlightSentence(raw, word), en: (r[i + 1] || '').trim() });
+        const raw = cell(r[i]);
+        if (raw) examples.push({ nl: raw.replace(/[[\]]/g, ''), html: highlightSentence(raw, word), en: cell(r[i + 1]) });
       }
       // Story slides: the word on its own first, then its example sentences.
       const slides = [{ nl: word, html: esc(word), en: '', isWord: true }, ...examples];
       return { word, examples, slides };
-    }).filter(w => w.word && w.examples.length);
+    }).filter(w => {
+      const key = w.word.toLowerCase();
+      if (!w.word || !w.examples.length || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   // Each word gets a cover picture from a fixed shuffle: looks random, but stays the same between visits.
@@ -99,17 +118,25 @@
     WORDS.forEach((w, i) => { w.cover = COVERS[i % COVERS.length]; });
   }
 
-  // words.csv is the word list; keep the last copy that loaded so the app still works offline.
+  // The word list comes from the Google Sheet (published as CSV) so words can be added from the phone.
+  // If it can't be reached, use words.csv from the site, then the last copy that loaded (offline).
+  const SHEET_CSV_URL = '';
+  let lastFetch = 0, loadedCsv = '';
   async function fetchWordList() {
-    try {
-      const res = await fetch('words.csv', { cache: 'no-store' });
-      if (!res.ok) throw new Error(res.status);
-      const text = await res.text();
-      setWords(text);
-      store.set(WORDS_CSV_KEY, text);
-    } catch {
-      setWords(store.get(WORDS_CSV_KEY, ''));
+    lastFetch = Date.now();
+    for (const url of [SHEET_CSV_URL, 'words.csv'].filter(Boolean)) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        const text = await res.text();
+        if (!parseWords(text).length) throw new Error('no words'); // e.g. a sign-in page instead of CSV
+        setWords(text);
+        store.set(WORDS_CSV_KEY, text);
+        loadedCsv = text;
+        return;
+      } catch { /* try the next source */ }
     }
+    if (!loadedCsv) { loadedCsv = store.get(WORDS_CSV_KEY, ''); setWords(loadedCsv); }
   }
 
   // ---------- Dates ----------
@@ -165,7 +192,6 @@
   }
 
   // Words used to be listed as "De xxx"; the article was dropped. Move saved progress to the new names.
-  const dropDe = w => w.replace(/^de\s+(.)/i, (_, c) => c.toUpperCase());
   function migrateDeNames() {
     const readAt = getReadAt(), reviews = getReviews(), log = getLog();
     const deck = store.get(DECK_KEY, null);
@@ -686,13 +712,18 @@
   fetchWordList().then(() => { refreshDeck(); renderStudy(); renderWordList(); });
 
   // The app can't wake itself at 00:00, so check whenever it's running or comes back to the front:
-  // on a new day re-read words.csv and pick the day's words; otherwise drop read words past 72 hours.
+  // on a new day re-read the word list and pick the day's words; otherwise drop read words past 72 hours.
+  // Words added in the sheet show up when the app comes back to the front (re-read at most every 5 minutes).
   async function periodicCheck() {
     if (todayKey() !== lastDay) {
       lastDay = todayKey();
       await fetchWordList();
       refreshDeck();
       if (story.hidden) { renderStudy(); renderWordList(); }
+    } else if (!document.hidden && Date.now() - lastFetch > 5 * 60000) {
+      const before = loadedCsv;
+      await fetchWordList();
+      if (loadedCsv !== before && story.hidden) { renderStudy(); renderWordList(); }
     } else if (story.hidden && storyOrder().map(w => w.word).join('|') !== renderedOrder) {
       renderStories();
     }
