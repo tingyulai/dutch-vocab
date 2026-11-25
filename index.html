@@ -88,6 +88,13 @@
     </nav>
   </div>
 
+  <!-- Word list helpers: A–Z jump bar, letter bubble, back to top -->
+  <nav class="az-index" id="azIndex" aria-label="Jump to letter" hidden></nav>
+  <div class="az-bubble" id="azBubble" aria-hidden="true"></div>
+  <button class="to-top" id="toTop" aria-label="Back to top" tabindex="-1">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+  </button>
+
   <!-- "New words found" dialog -->
   <div class="modal" id="newWordsModal" hidden>
     <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="newWordsTitle" aria-describedby="newWordsList">

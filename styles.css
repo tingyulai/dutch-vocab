@@ -320,6 +320,51 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .wl-sort button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
 .wl-list-gap { height: 10px; }
 
+/* A–Z jump bar (right edge of the app column), letter bubble, back-to-top */
+.az-on #wordList { padding-right: 18px; }
+.az-index {
+  position: fixed; z-index: 20;
+  right: max(0px, calc((100vw - 430px) / 2));
+  top: calc(env(safe-area-inset-top) + 150px);
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  width: 26px;
+  display: flex; flex-direction: column; justify-content: center;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.az-index[hidden] { display: none; }
+.az-index button {
+  flex: 0 1 22px; min-height: 0;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  color: var(--accent);
+  display: grid; place-items: center;
+}
+.az-bubble {
+  position: fixed; z-index: 40; left: 50%; top: 45%;
+  width: 72px; height: 72px; margin: -36px 0 0 -36px;
+  border-radius: 20px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+  font-size: 34px; font-weight: 600;
+  display: grid; place-items: center;
+  opacity: 0; transform: scale(.9); pointer-events: none;
+  transition: opacity .15s ease, transform .15s ease;
+}
+.az-bubble.show { opacity: 1; transform: scale(1); }
+.to-top {
+  position: fixed; z-index: 20;
+  right: calc(max(0px, (100vw - 430px) / 2) + 20px);
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--line); box-shadow: var(--shadow);
+  display: grid; place-items: center;
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.az-on .to-top { right: calc(max(0px, (100vw - 430px) / 2) + 34px); }
+.to-top.show { opacity: 1; transform: none; pointer-events: auto; }
+.to-top svg { width: 20px; height: 20px; }
+
 /* ---------- Toast & dialog ---------- */
 .toast {
   position: fixed; z-index: 60; left: 50%;
@@ -356,9 +401,14 @@ svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width:
 .btn-quiet:hover { background: var(--surface-2); }
 .btn-primary { background: var(--accent); color: var(--accent-ink); }
 .wl-letter {
-  margin: 18px 4px 8px; font-size: 12px; font-weight: 600;
+  /* Sticks to the top while its section scrolls past, so you always see where you are */
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3;
+  margin: 10px -4px 2px; padding: 8px 8px 6px;
+  background: var(--bg);
+  font-size: 12px; font-weight: 600;
   letter-spacing: .12em; color: var(--muted);
 }
+.wl-anchor { height: 0; }
 .wl-item {
   background: var(--surface);
   border: 1px solid var(--line);

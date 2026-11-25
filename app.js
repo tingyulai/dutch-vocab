@@ -386,9 +386,13 @@
     $('wordTotal').textContent = sorted.length;
     document.querySelectorAll('.wl-sort button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.sort === wordSort)));
     let html = wordSort === 'az' ? '' : '<div class="wl-list-gap"></div>', letter = '';
+    const letters = [];
     sorted.forEach(w => {
       const first = w.word[0].toUpperCase();
-      if (wordSort === 'az' && first !== letter) { letter = first; html += `<h3 class="wl-letter">${esc(letter)}</h3>`; }
+      if (wordSort === 'az' && first !== letter) {
+        letter = first; letters.push(letter);
+        html += `<div class="wl-anchor" id="wl-letter-${letters.length - 1}"></div><h3 class="wl-letter">${esc(letter)}</h3>`;
+      }
       const open = openWords.has(w.word);
       const count = reviews[w.word] || 0;
       html += `
@@ -409,7 +413,71 @@
         </div>`;
     });
     $('wordList').innerHTML = html || `<p class="empty">No words yet — add some to words.csv</p>`;
+    $('azIndex').innerHTML = letters.map((l, i) =>
+      `<button data-i="${i}" aria-label="Jump to ${esc(l)}">${esc(l)}</button>`).join('');
+    updateListHelpers();
   }
+
+  // ---------- A–Z jump bar & back-to-top ----------
+  const onWordsTab = () => $('view-words').classList.contains('active');
+  function updateListHelpers() {
+    const az = onWordsTab() && wordSort === 'az' && WORDS.length > 0;
+    $('azIndex').hidden = !az;
+    document.body.classList.toggle('az-on', az);
+    $('toTop').classList.toggle('show', onWordsTab() && window.scrollY > 600);
+  }
+
+  function jumpToLetter(i) {
+    const anchor = $(`wl-letter-${i}`);
+    if (!anchor) return;
+    window.scrollTo({ top: anchor.getBoundingClientRect().top + window.scrollY - 4 });
+  }
+
+  // Tap or slide a finger along the bar, like the Contacts app; a big letter shows where you are.
+  (() => {
+    const bar = $('azIndex'), bubble = $('azBubble');
+    let current = -1, active = false, hideTimer = 0;
+    const pick = y => {
+      const btns = bar.querySelectorAll('button');
+      if (!btns.length) return;
+      const first = btns[0].getBoundingClientRect(), last = btns[btns.length - 1].getBoundingClientRect();
+      const step = (last.bottom - first.top) / btns.length;
+      const i = Math.max(0, Math.min(btns.length - 1, Math.floor((y - first.top) / step)));
+      if (i === current) return;
+      current = i;
+      bubble.textContent = btns[i].textContent;
+      jumpToLetter(i);
+    };
+    bar.addEventListener('pointerdown', e => {
+      active = true; current = -1;
+      clearTimeout(hideTimer);
+      try { bar.setPointerCapture(e.pointerId); } catch { /* keep going without capture */ }
+      bubble.classList.add('show');
+      pick(e.clientY);
+      e.preventDefault();
+    });
+    bar.addEventListener('pointermove', e => { if (active) pick(e.clientY); });
+    const end = () => {
+      if (!active) return;
+      active = false;
+      hideTimer = setTimeout(() => bubble.classList.remove('show'), 350);
+    };
+    bar.addEventListener('pointerup', end);
+    bar.addEventListener('pointercancel', end);
+    // Keyboard users: Enter/Space on a letter.
+    bar.addEventListener('keydown', e => {
+      const b = e.target.closest('button[data-i]');
+      if (b && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); jumpToLetter(Number(b.dataset.i)); }
+    });
+  })();
+
+  let scrollQueued = false;
+  window.addEventListener('scroll', () => {
+    if (scrollQueued) return;
+    scrollQueued = true;
+    requestAnimationFrame(() => { scrollQueued = false; updateListHelpers(); });
+  }, { passive: true });
+  $('toTop').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
   document.querySelector('.wl-sort').addEventListener('click', e => {
     const b = e.target.closest('button[data-sort]');
@@ -772,6 +840,7 @@
       stopListSpeech();
       document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === btn.dataset.view));
+      updateListHelpers();
     });
   });
 
