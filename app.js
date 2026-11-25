@@ -373,14 +373,22 @@
   const openWords = new Set();   // expanded rows survive re-renders
   let listToken = 0;
 
+  // Sort: A–Z with letter headers, or the order words were added to the list (row order), either way round.
+  const SORT_KEY = 'dv.wordSort';
+  let wordSort = store.get(SORT_KEY, 'az');
+  if (!['az', 'newest', 'oldest'].includes(wordSort)) wordSort = 'az';
+
   function renderWordList() {
     const reviews = getReviews();
-    const sorted = [...WORDS].sort((a, b) => a.word.localeCompare(b.word, 'nl', { sensitivity: 'base' }));
+    const sorted = wordSort === 'az'
+      ? [...WORDS].sort((a, b) => a.word.localeCompare(b.word, 'nl', { sensitivity: 'base' }))
+      : wordSort === 'newest' ? [...WORDS].reverse() : [...WORDS];
     $('wordTotal').textContent = sorted.length;
-    let html = '', letter = '';
+    document.querySelectorAll('.wl-sort button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.sort === wordSort)));
+    let html = wordSort === 'az' ? '' : '<div class="wl-list-gap"></div>', letter = '';
     sorted.forEach(w => {
       const first = w.word[0].toUpperCase();
-      if (first !== letter) { letter = first; html += `<h3 class="wl-letter">${esc(letter)}</h3>`; }
+      if (wordSort === 'az' && first !== letter) { letter = first; html += `<h3 class="wl-letter">${esc(letter)}</h3>`; }
       const open = openWords.has(w.word);
       const count = reviews[w.word] || 0;
       html += `
@@ -402,6 +410,16 @@
     });
     $('wordList').innerHTML = html || `<p class="empty">No words yet — add some to words.csv</p>`;
   }
+
+  document.querySelector('.wl-sort').addEventListener('click', e => {
+    const b = e.target.closest('button[data-sort]');
+    if (!b || b.dataset.sort === wordSort) return;
+    wordSort = b.dataset.sort;
+    store.set(SORT_KEY, wordSort);
+    stopListSpeech();
+    renderWordList();
+    window.scrollTo({ top: 0 });
+  });
 
   // ---------- "Check for new words" button ----------
   let toastTimer = 0;
